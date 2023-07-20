@@ -1,0 +1,66 @@
+package main
+
+import (
+	"fmt"
+	"github.com/lvkeliang/httpws/context"
+	"github.com/lvkeliang/httpws/middleware"
+	"github.com/lvkeliang/httpws/router"
+	"github.com/lvkeliang/httpws/server"
+	"io"
+	"log"
+	"net"
+)
+
+// 下面是一个简单的使用示例，它展示了如何使用我之前提供的五个模块来构建一个简单的 Web 应用：
+
+func main() {
+	r := router.NewRouter()
+	r.HandleFunc("/", indexHandler)
+	r.HandleFunc("/hello", middleware.Chain(loggingMiddleware, nameMiddleware, helloHandler))
+
+	s := &server.Server{
+		Addr:    ":8080",
+		Handler: r,
+	}
+
+	log.Println("Starting server on :8080")
+	s.ListenAndServe()
+}
+
+func indexHandler(conn net.Conn, req []byte) {
+	io.WriteString(conn, "HTTP/1.1 200 OK\r\n\r\nWelcome to my website!")
+}
+
+func helloHandler(next router.HandlerFunc) router.HandlerFunc {
+	return func(conn net.Conn, req []byte) {
+		ctx := context.NewContext(conn, req)
+		name, ok := ctx.Get("name")
+		fmt.Printf("name :========%v\n", name)
+		if !ok {
+			name = "World"
+		}
+		io.WriteString(conn, fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\nHello, %s!", name))
+	}
+}
+
+func loggingMiddleware(next router.HandlerFunc) router.HandlerFunc {
+	return func(conn net.Conn, req []byte) {
+		log.Printf("Received request: %s\n", req)
+		next(conn, req)
+	}
+}
+
+// 添加一个中间件函数，用于设置 name 数据
+func nameMiddleware(next router.HandlerFunc) router.HandlerFunc {
+	return func(conn net.Conn, req []byte) {
+		ctx := context.NewContext(conn, req)
+		ctx.Set("name", "Alice") // 设置 name 数据
+		next(conn, req)
+	}
+}
+
+// 这个示例代码定义了两个路由处理器：indexHandler 和 helloHandler。indexHandler 处理器用于处理根路径 / 的请求，它会向客户端发送一条欢迎消息。helloHandler 处理器用于处理 /hello 路径的请求，它会从上下文对象中获取 name 数据，并向客户端发送一条问候消息。
+
+// 这个示例代码还定义了一个中间件函数：loggingMiddleware。这个中间件函数用于在处理请求之前打印一条日志消息，记录收到的请求数据。
+
+// 最后，这个示例代码创建了一个 Server 实例，并使用 ListenAndServe 方法启动服务器。服务器监听 :8080 端口上的 TCP 连接，并使用路由器和中间件来处理客户端发送的请求。
