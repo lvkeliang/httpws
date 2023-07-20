@@ -1,10 +1,10 @@
 package server
 
 import (
-	"github.com/lvkeliang/httpws/context"
 	"io"
 	"log"
 	"net"
+	"sync"
 )
 
 // 您好！您的想法非常有趣。这是一个简单的服务器模块包的实现示例，它使用了 net 包来监听端口并接收客户端连接：
@@ -15,42 +15,62 @@ type Server struct {
 }
 
 type Handler interface {
-	Serve(conn net.Conn, req []byte)
+	Serve(c *Conn)
 }
 
-type connServe struct {
-	listener net.Listener
-	conn     net.Conn
-	context  context.Context
+type Conn struct {
+	Conn net.Conn
+	Req  []byte
+	Data map[string]interface{}
+	mu   sync.RWMutex
+}
+
+func (c *Conn) Set(key string, value interface{}) {
+	if c.Data == nil {
+		c.Data = make(map[string]interface{})
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.Data[key] = value
+}
+
+func (c *Conn) Get(key string) (value interface{}, ok bool) {
+	if c.Data == nil {
+		c.Data = make(map[string]interface{})
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	value, ok = c.Data[key]
+	return
 }
 
 func (s *Server) ListenAndServe() {
-	connectServe := new(connServe)
+	c := new(Conn)
 
-	var err error
-	connectServe.listener, err = net.Listen("tcp", s.Addr)
+	listener, err := net.Listen("tcp", s.Addr)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer connectServe.listener.Close()
+	defer listener.Close()
 
 	for {
-		connectServe.conn, err = connectServe.listener.Accept()
+		c.Conn, err = listener.Accept()
 		if err != nil {
 			log.Println("listener err: ", err)
 			continue
 		}
 		go func() {
 			req := make([]byte, 1024)
-			n, err := connectServe.conn.Read(req)
+			n, err := c.Conn.Read(req)
 			if err != nil {
 				if err != io.EOF {
 					log.Println("conn read err: ", err)
 				}
 				return
 			}
-			s.Handler.Serve(connectServe.conn, req[:n])
-			connectServe.conn.Close()
+			c.Req = req[:n]
+			s.Handler.Serve(c)
+			c.Conn.Close()
 		}()
 	}
 }

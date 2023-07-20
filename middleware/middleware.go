@@ -2,7 +2,7 @@ package middleware
 
 import (
 	"github.com/lvkeliang/httpws/router"
-	"net"
+	"github.com/lvkeliang/httpws/server"
 )
 
 type Middleware func(router.HandlerFunc) router.HandlerFunc
@@ -10,14 +10,14 @@ type Middleware func(router.HandlerFunc) router.HandlerFunc
 func Chain(middlewares ...Middleware) router.HandlerFunc {
 
 	chain := func(final router.HandlerFunc) router.HandlerFunc { // 修改这一行
-		return func(conn net.Conn, req []byte) {
+		return func(c server.Conn) {
 			last := final
 			for i := len(middlewares) - 1; i >= 0; i-- {
 				last = middlewares[i](last)
 			}
 
 			if last != nil { // 添加这一行，检查 last 是否为 nil
-				last(conn, req)
+				last(c)
 			}
 		}
 	}

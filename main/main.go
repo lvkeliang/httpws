@@ -2,13 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/lvkeliang/httpws/context"
 	"github.com/lvkeliang/httpws/middleware"
 	"github.com/lvkeliang/httpws/router"
 	"github.com/lvkeliang/httpws/server"
 	"io"
 	"log"
-	"net"
 )
 
 // 下面是一个简单的使用示例，它展示了如何使用我之前提供的五个模块来构建一个简单的 Web 应用：
@@ -27,35 +25,32 @@ func main() {
 	s.ListenAndServe()
 }
 
-func indexHandler(conn net.Conn, req []byte) {
-	io.WriteString(conn, "HTTP/1.1 200 OK\r\n\r\nWelcome to my website!")
+func indexHandler(c server.Conn) {
+	io.WriteString(c.Conn, "HTTP/1.1 200 OK\r\n\r\nWelcome to my website!")
 }
 
 func helloHandler(next router.HandlerFunc) router.HandlerFunc {
-	return func(conn net.Conn, req []byte) {
-		ctx := context.NewContext(conn, req)
-		name, ok := ctx.Get("name")
-		fmt.Printf("name :========%v\n", name)
+	return func(c server.Conn) {
+		name, ok := c.Get("name")
 		if !ok {
 			name = "World"
 		}
-		io.WriteString(conn, fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\nHello, %s!", name))
+		io.WriteString(c.Conn, fmt.Sprintf("HTTP/1.1 200 OK\r\n\r\nHello, %s!", name))
 	}
 }
 
 func loggingMiddleware(next router.HandlerFunc) router.HandlerFunc {
-	return func(conn net.Conn, req []byte) {
-		log.Printf("Received request: %s\n", req)
-		next(conn, req)
+	return func(c server.Conn) {
+		log.Printf("Received request: %s\n", c.Req)
+		next(c)
 	}
 }
 
 // 添加一个中间件函数，用于设置 name 数据
 func nameMiddleware(next router.HandlerFunc) router.HandlerFunc {
-	return func(conn net.Conn, req []byte) {
-		ctx := context.NewContext(conn, req)
-		ctx.Set("name", "Alice") // 设置 name 数据
-		next(conn, req)
+	return func(c server.Conn) {
+		c.Set("name", "Alice") // 设置 name 数据
+		next(c)
 	}
 }
 
