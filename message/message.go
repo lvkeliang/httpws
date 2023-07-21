@@ -76,10 +76,7 @@ func (m *Message) Print() {
 	fmt.Println("Body:", string(m.Body)) // 打印报文主体
 }
 
-// 这是一个简单的读取 form-data 的函数，它接受一个 Message 类型的参数，用于存储报文的各个部分：
-
-// ReadFormData 函数用于从报文主体 Body 中读取 form-data，并返回一个 map 类型的结果：
-
+// ReadFormData 函数用于从报文主体 Body 中读取 form-data，并返回一个 map 类型的结果。它接受一个 Message 类型的参数：
 func (m *Message) ReadFormData() (map[string]string, error) {
 	result := make(map[string]string) // 创建一个空的 map，用于存储结果
 
