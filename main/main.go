@@ -13,8 +13,8 @@ import (
 
 func main() {
 	r := router.NewRouter()
-	r.HandleFunc("/", indexHandler)
-	r.HandleFunc("/hello", middleware.Chain(loggingMiddleware, nameMiddleware, helloHandler))
+	r.HandleFunc("GET", "/", indexHandler)
+	r.HandleFunc("POST", "/hello", middleware.Chain(loggingMiddleware, nameMiddleware, printFormData, helloMiddleware))
 
 	s := &server.Server{
 		Addr:    ":8080",
@@ -27,9 +27,10 @@ func main() {
 
 func indexHandler(c server.Conn) {
 	io.WriteString(c.Conn, "HTTP/1.1 200 OK\r\n\r\nWelcome to my website!")
+	// c.Message.Print()
 }
 
-func helloHandler(next router.HandlerFunc) router.HandlerFunc {
+func helloMiddleware(next router.HandlerFunc) router.HandlerFunc {
 	return func(c server.Conn) {
 		name, ok := c.Get("name")
 		if !ok {
@@ -41,7 +42,8 @@ func helloHandler(next router.HandlerFunc) router.HandlerFunc {
 
 func loggingMiddleware(next router.HandlerFunc) router.HandlerFunc {
 	return func(c server.Conn) {
-		log.Printf("Received request: %s\n", c.Req)
+		// log.Printf("Received request: %s\n", c.Req)
+		// c.Message.Print()
 		next(c)
 	}
 }
@@ -49,7 +51,16 @@ func loggingMiddleware(next router.HandlerFunc) router.HandlerFunc {
 // 添加一个中间件函数，用于设置 name 数据
 func nameMiddleware(next router.HandlerFunc) router.HandlerFunc {
 	return func(c server.Conn) {
-		c.Set("name", "Alice") // 设置 name 数据
+		value, _ := c.Message.ReadFormData()
+		c.Set("name", value["name"]) // 设置 name 数据
+		next(c)
+	}
+}
+
+// 添加一个中间件函数，用于打印表单
+func printFormData(next router.HandlerFunc) router.HandlerFunc {
+	return func(c server.Conn) {
+		fmt.Println(c.Message.ReadFormData())
 		next(c)
 	}
 }

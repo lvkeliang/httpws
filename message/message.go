@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"strings"
 )
 
 type Message struct {
@@ -73,4 +74,122 @@ func (m *Message) Print() {
 		fmt.Printf("%s: %s\n", name, value)
 	}
 	fmt.Println("Body:", string(m.Body)) // 打印报文主体
+}
+
+// 这是一个简单的读取 form-data 的函数，它接受一个 Message 类型的参数，用于存储报文的各个部分：
+
+// ReadFormData 函数用于从报文主体 Body 中读取 form-data，并返回一个 map 类型的结果：
+
+func (m *Message) ReadFormData() (map[string]string, error) {
+	result := make(map[string]string) // 创建一个空的 map，用于存储结果
+
+	// 获取内容类型（Content-Type）
+	contentType, ok := m.Headers["Content-Type"]
+	if !ok {
+		return nil, errors.New("no content type")
+	}
+
+	// 解析出边界（boundary）的值
+	parts := strings.Split(contentType, "boundary=")
+	if len(parts) != 2 {
+		return nil, errors.New("invalid content type")
+	}
+	boundary := parts[1]
+
+	// 将报文主体 Body 转换为一个字节切片
+	body := m.Body
+
+	// 使用边界（boundary）作为分隔符，将报文主体 Body 分割成多个字节切片
+	// 在原boundary前加“--”即为分界线
+	// 原boundary前后各加“--”即为结尾分界线
+	form := bytes.Split(body, []byte("--"+boundary))
+
+	// fmt.Printf("form: %s\n", form)
+
+	// 遍历每个字节切片
+	for key, part := range form {
+		// 遇到结尾分界线就不读了
+		if key >= len(form)-1 {
+			break
+		}
+		// 去掉前后的回车换行符（CRLF）
+		part = bytes.TrimSpace(part)
+
+		// 如果是空字节切片，跳过
+		if len(part) == 0 {
+			continue
+		}
+
+		// 使用回车换行符（CRLF）作为分隔符，将字节切片分割成两个字节切片
+		subparts := bytes.SplitN(part, []byte("\r\n"), 2)
+		if len(subparts) != 2 {
+			return nil, errors.New("invalid part format")
+		}
+
+		// 第一个字节切片是头部字段（header），第二个字节切片是值
+		// 第二关切片的开头是"\r\n"，用[2:]将其切掉
+		header := subparts[0]
+		val := subparts[1][2:]
+
+		// 解析头部字段（header），获取名称和值
+		key, value, err := parseHeader(header, val)
+		if err != nil {
+			return nil, err
+		}
+
+		// 将名称和值存储在 map 中
+		result[key] = value
+	}
+
+	return result, nil // 返回结果
+
+}
+
+// parseHeader 函数用于解析头部字段（header），获取名称和值：
+
+func parseHeader(header []byte, value []byte) (string, string, error) {
+	// 将头部字段（header）转换为字符串，并按照分号（;）分割成多个部分
+	parts := strings.Split(string(header), ";")
+	if len(parts) == 0 {
+		return "", "", errors.New("invalid header format")
+	}
+
+	// 遍历每个部分，查找名称和值
+	var name string
+	var filename string
+	for _, part := range parts {
+		// 去掉前后的空白字符
+		part = strings.TrimSpace(part)
+
+		// 如果是空字符串，跳过
+		if len(part) == 0 {
+			continue
+		}
+
+		// 如果是以 name= 开头的部分，获取名称的值
+		if strings.HasPrefix(part, "name=") {
+			name = strings.Trim(part[5:], "\"")
+			continue
+		}
+
+		// 如果是以 filename= 开头的部分，获取文件名的值
+		if strings.HasPrefix(part, "filename=") {
+			filename = strings.Trim(part[9:], "\"")
+			continue
+		}
+	}
+
+	// 如果没有找到名称，返回错误
+	if name == "" {
+		return "", "", errors.New("no name found")
+	}
+
+	// 如果有文件名，将文件名作为值的一部分，并去掉前后的回车换行符（CRLF）
+	if filename != "" {
+		value = append([]byte(filename+"\r\n"), value...)
+		value = bytes.TrimSpace(value)
+	}
+
+	return name, string(value), nil // 返回名称和值
+
 }

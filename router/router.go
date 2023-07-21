@@ -5,6 +5,7 @@ package router
 import (
 	"github.com/lvkeliang/httpws/server"
 	"io"
+	"log"
 	"strings"
 )
 
@@ -25,14 +26,36 @@ func NewRouter() *Router {
 	}
 }
 
-func (r *Router) HandleFunc(pattern string, handler HandlerFunc) {
-	r.rules[pattern] = handler
+func (r *Router) HandleFunc(method string, pattern string, handler HandlerFunc) {
+	switch method {
+	case "GET":
+		r.rules[method+" "+pattern] = handler
+	case "POST":
+		r.rules[method+" "+pattern] = handler
+	case "PUT":
+		r.rules[method+" "+pattern] = handler
+	case "PATCH":
+		r.rules[method+" "+pattern] = handler
+	case "DELETE":
+		r.rules[method+" "+pattern] = handler
+	case "HEAD":
+		r.rules[method+" "+pattern] = handler
+	case "OPTIONS":
+		r.rules[method+" "+pattern] = handler
+	default:
+		log.Printf("method err: unsolved method \"%v\"\n", method)
+	}
 }
 
 func (r *Router) Serve(c *server.Conn) {
-	reqStr := string(c.Req)
-	path := strings.Split(reqStr, " ")[1]
-	handler, ok := r.rules[path]
+	//reqStr := string(c.Req)
+	//path := strings.Split(reqStr, " ")[1]
+
+	// path := strings.Split(c.Message.StartLine, " ")[1]
+	// handler, ok := r.rules[path]
+
+	lsatInd := strings.LastIndex(c.Message.StartLine, " ")
+	handler, ok := r.rules[c.Message.StartLine[:lsatInd]]
 	if !ok {
 		io.WriteString(c.Conn, "HTTP/1.1 404 Not Found\r\n\r\nNot Found")
 		return

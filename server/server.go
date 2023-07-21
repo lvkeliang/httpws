@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/lvkeliang/httpws/message"
 	"io"
 	"log"
 	"net"
@@ -19,10 +20,10 @@ type Handler interface {
 }
 
 type Conn struct {
-	Conn net.Conn
-	Req  []byte
-	Data map[string]interface{}
-	mu   sync.RWMutex
+	Conn    net.Conn
+	Message *message.Message
+	Data    map[string]interface{}
+	mu      sync.RWMutex
 }
 
 func (c *Conn) Set(key string, value interface{}) {
@@ -68,7 +69,11 @@ func (s *Server) ListenAndServe() {
 				}
 				return
 			}
-			c.Req = req[:n]
+			c.Message, err = message.NewMessage(req[:n])
+			if err != nil {
+				log.Println("create new message err: ", err)
+				return
+			}
 			s.Handler.Serve(c)
 			c.Conn.Close()
 		}()
