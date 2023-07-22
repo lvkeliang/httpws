@@ -194,7 +194,6 @@ r.HandleFunc("POST", "/hello", loggingMiddleware, nameMiddleware, printFormData,
 ```Go
 c.Message.Print() // 打印请求消息
 value, _ := c.Message.ReadFormData() // 从请求正文中读取表单数据
-cookie := c.Message.ReadCookie("name") // 从请求头部中读取名为 "name" 的 cookie
 ```
 
 你也可以使用`WriteResponse`方法来向客户端写入一个 HTTP 响应。你可以传递参数，如状态码、原因短语、响应正文和响应头部。

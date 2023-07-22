@@ -194,7 +194,6 @@ For example, you can use the `Message` field to access the request message, whic
 ```Go
 c.Message.Print() // Print the request message
 value, _ := c.Message.ReadFormData() // Read the form data from the request body
-cookie := c.Message.ReadCookie("name") // Read the cookie named "name" from the request header
 ```
 
 You can also use the `WriteResponse` method to write an HTTP response to the client. You can pass arguments such as status code, reason phrase, response body, and response headers.
