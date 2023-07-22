@@ -1,6 +1,6 @@
 # httpws
 
-httpws is a lightweight and fast HTTP and WebSocket framework for Go. It provides a simple and flexible way to build web applications with middleware support, routing, and WebSocket communication.
+httpws is a lightweight HTTP and WebSocket framework for Go. It provides a simple and flexible way to build web applications with middleware support, routing, and WebSocket communication.
 
 ## Table of Contents
 
@@ -237,7 +237,6 @@ if err != nil { // If there is an error, handle it and break the loop
 }
 
 // Write a message to the WebSocket connection with the same opcode and payload, if there is an error, handle it and break the loop
-
 if err := c.WriteWebSocketMessage(opCode, payload); err != nil {
     c.WebSocketHandleError(err)
     break

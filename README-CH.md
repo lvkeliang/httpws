@@ -1,6 +1,6 @@
 # httpws
 
-httpws是一个轻量级且快速的Go语言HTTP和WebSocket框架。它提供了一种简单灵活的方式来构建具有中间件支持、路由和WebSocket通信的web应用程序。
+httpws是一个轻量级的Go语言HTTP和WebSocket框架。它提供了一种简单灵活的方式来构建具有中间件支持、路由和WebSocket通信的web应用程序。
 
 ## 目录
 
@@ -237,7 +237,6 @@ if err != nil { // 如果有错误，处理它并跳出循环
 }
 
 // 向 WebSocket 连接写入一个消息，使用相同的操作码和有效载荷，如果有错误，处理它并跳出循环
-
 if err := c.WriteWebSocketMessage(opCode, payload); err != nil {
     c.WebSocketHandleError(err)
     break
