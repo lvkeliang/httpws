@@ -1,5 +1,5 @@
-// Package message 这是一个简单的读取报文数据的包，它定义了一个 Message 结构体，用于存储报文的各个部分：
-package message
+// Package context 这是一个简单的读取报文数据的包，它定义了一个 Context 结构体，用于存储报文的各个部分：
+package context
 
 import (
 	"bufio"
@@ -11,15 +11,15 @@ import (
 	"strings"
 )
 
-type Message struct {
+type Context struct {
 	StartLine string            // 起始行
 	Headers   map[string]string // 头部字段
 	Body      []byte            // 报文主体
 }
 
-// NewMessage 函数用于从 Req 变量中创建一个 Message 实例，并返回它：
-func NewMessage(Req []byte) (*Message, error) {
-	m := &Message{}                            // 创建一个空的 Message 实例
+// NewContext 函数用于从 Req 变量中创建一个 Context 实例，并返回它：
+func NewContext(Req []byte) (*Context, error) {
+	m := &Context{}                            // 创建一个空的 Context 实例
 	r := bufio.NewReader(bytes.NewReader(Req)) // 创建一个 Reader 对象，用于从 Req 变量中读取数据
 
 	// 读取起始行
@@ -51,7 +51,7 @@ func NewMessage(Req []byte) (*Message, error) {
 	// 读取报文主体
 	contentLength, ok := m.Headers["Content-Length"] // 从头部字段中获取内容长度（Content-Length）
 	if !ok {                                         // 如果没有内容长度，说明没有报文主体
-		return m, nil // 返回 Message 实例
+		return m, nil // 返回 Context 实例
 	}
 	length, err := strconv.Atoi(contentLength) // 将内容长度转换为整数
 	if err != nil {
@@ -63,11 +63,11 @@ func NewMessage(Req []byte) (*Message, error) {
 		return nil, err // 如果读取失败，返回错误
 	}
 
-	return m, nil // 返回 Message 实例
+	return m, nil // 返回 Context 实例
 }
 
-// Print 函数用于打印 Message 实例的各个部分，方便调试：
-func (m *Message) Print() {
+// Print 函数用于打印 Context 实例的各个部分，方便调试：
+func (m *Context) Print() {
 	fmt.Println("StartLine:", m.StartLine) // 打印起始行
 	fmt.Println("Headers:")                // 打印头部字段
 	for name, value := range m.Headers {
@@ -76,8 +76,8 @@ func (m *Message) Print() {
 	fmt.Println("Body:", string(m.Body)) // 打印报文主体
 }
 
-// ReadFormData 函数用于从报文主体 Body 中读取 form-data，并返回一个 map 类型的结果。它接受一个 Message 类型的参数：
-func (m *Message) ReadFormData() (map[string]string, error) {
+// ReadFormData 函数用于从报文主体 Body 中读取 form-data，并返回一个 map 类型的结果。它接受一个 Context 类型的参数：
+func (m *Context) ReadFormData() (map[string]string, error) {
 	result := make(map[string]string) // 创建一个空的 map，用于存储结果
 
 	// 获取内容类型（Content-Type）

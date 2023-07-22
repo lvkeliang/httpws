@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/lvkeliang/httpws/middleware"
 	"github.com/lvkeliang/httpws/router"
 	"github.com/lvkeliang/httpws/server"
 	"log"
@@ -12,30 +11,27 @@ import (
 func main() {
 	// 创建一个路由
 	r := router.NewRouter()
-	r.HandleFunc("GET", "/", indexHandler)
-	r.HandleFunc("POST", "/hello", middleware.Chain(loggingMiddleware, nameMiddleware, printFormData, helloMiddleware))
-	r.HandleFunc("GET", "/ws", middleware.Chain(handleWebSocket))
-
-	// 创建了一个 Server 实例，并使用 ListenAndServe 方法启动服务器。服务器监听 :8080 端口上的 TCP 连接，并使用路由器和中间件来处理客户端发送的请求。
-	s := &server.Server{
-		Addr:    ":8080",
-		Handler: r,
-	}
+	r.HandleFunc("GET", "/", indexMiddleware)
+	r.HandleFunc("POST", "/hello", loggingMiddleware, nameMiddleware, printFormData, helloMiddleware)
+	r.HandleFunc("GET", "/ws", handleWebSocket)
 
 	log.Println("Starting server on :8080")
-	s.ListenAndServe()
+	r.ListenAndServe(":8080")
 }
 
-func indexHandler(c server.Conn) {
-	c.Message.Print()
-	c.WriteResponse(200, "OK", []byte("Welcome to my website!"))
+// 用于回复一个访问根目录的消息
+func indexMiddleware(next router.HandlerFunc) router.HandlerFunc {
+	return func(c server.Conn) {
+		c.Message.Print()
+		c.WriteResponse(200, "OK", []byte("Welcome to my website!"))
+		next(c)
+	}
 }
 
 // 用于在处理请求之前打印一条日志消息，记录收到的请求数据。
 func loggingMiddleware(next router.HandlerFunc) router.HandlerFunc {
 	return func(c server.Conn) {
 		c.Message.Print()
-		// 不是最后一个中间件，需要调用next(c)
 		next(c)
 	}
 }
@@ -67,8 +63,8 @@ func helloMiddleware(next router.HandlerFunc) router.HandlerFunc {
 
 		c.WriteResponse(200, "OK", []byte(fmt.Sprintf("Hello, %s!", name)),
 			map[string]string{"set-cookie": fmt.Sprintf("name=%v; Max-Age=3600; Domain=localhost;Secure; Path=/; Version=1", name)})
+		next(c)
 	}
-	// 是最后一个中间件，不要调用next(c)
 }
 
 // handleWebSocket 处理WebSocket请求
@@ -90,7 +86,7 @@ func handleWebSocket(next router.HandlerFunc) router.HandlerFunc {
 				break
 			}
 			// 将收到的消息打印到控制台
-			fmt.Printf("Received message: opCode = %d, payload = %s\n", opCode, string(payload))
+			fmt.Printf("Received context: opCode = %d, payload = %s\n", opCode, string(payload))
 			// 将收到的消息原样写回到WebSocket连接中，如果出错，处理错误并退出循环
 			if err := c.WriteWebSocketMessage(opCode, payload); err != nil {
 				c.WebSocketHandleError(err)

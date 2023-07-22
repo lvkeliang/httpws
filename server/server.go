@@ -9,7 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/lvkeliang/httpws/message"
+	"github.com/lvkeliang/httpws/context"
 	"io"
 	"log"
 	"math"
@@ -18,56 +18,11 @@ import (
 	"sync"
 )
 
-type Server struct {
-	Addr    string
-	Handler Handler
-}
-
-type Handler interface {
-	Serve(c *Conn)
-}
-
 type Conn struct {
 	Conn    net.Conn
-	Message *message.Message
+	Message *context.Context
 	Data    map[string]interface{}
 	mu      sync.RWMutex
-}
-
-// ListenAndServe 方法使用 net.Listen 函数监听指定的地址上的 TCP 连接，当接收到新的连接时，它会调用处理器的 Serve 方法来处理这个连接。
-func (s *Server) ListenAndServe() {
-	c := new(Conn)
-
-	listener, err := net.Listen("tcp", s.Addr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer listener.Close()
-
-	for {
-		c.Conn, err = listener.Accept()
-		if err != nil {
-			log.Println("listener err: ", err)
-			continue
-		}
-		go func() {
-			req := make([]byte, 1024)
-			n, err := c.Conn.Read(req)
-			if err != nil {
-				if err != io.EOF {
-					log.Println("conn read err: ", err)
-				}
-				return
-			}
-			c.Message, err = message.NewMessage(req[:n])
-			if err != nil {
-				log.Println("create new message err: ", err)
-				return
-			}
-			s.Handler.Serve(c)
-			c.Conn.Close()
-		}()
-	}
 }
 
 // Set 用于跨中间件设置值
@@ -217,12 +172,12 @@ func (c *Conn) UpgradeToWebSocket() error {
 	defer c.mu.Unlock()
 
 	if c.Message == nil { // 如果没有收到消息，返回错误
-		log.Println("Message == nil")
+		log.Println("Context == nil")
 		return errInvalidHandshake
 	}
 
 	if !strings.HasPrefix(c.Message.StartLine, "GET") || !strings.HasSuffix(c.Message.StartLine, "HTTP/1.1") { // 如果请求行不是GET / HTTP/1.1，返回错误
-		log.Printf("Message.StartLine != \"GET / HTTP/1.1\"\nreceved: %v\n", c.Message.StartLine)
+		log.Printf("Context.StartLine != \"GET / HTTP/1.1\"\nreceved: %v\n", c.Message.StartLine)
 		return errInvalidHandshake
 	}
 
